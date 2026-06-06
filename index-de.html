@@ -101,6 +101,15 @@ select:focus{border-color:#6b4520}
 </div>
 
 <div class="controls">
+  <label style="gap:6px">
+    Riegel:
+    <select id="boltCount" onchange="setBoltCount()">
+      <option value="2">2</option><option value="3">3</option><option value="4">4</option>
+      <option value="5">5</option><option value="6" selected>6</option>
+      <option value="7">7</option><option value="8">8</option>
+    </select>
+  </label>
+  <div class="ctrl-sep"></div>
   <label>
     <input type="checkbox" id="inv" checked onchange="refreshSol()">
     Rechts drücken = Riegel nach links
@@ -121,22 +130,23 @@ select:focus{border-color:#6b4520}
 
 <script>
 /* ── State ───────────────────────────────────────────────────────── */
-function emptyMat(){return[[0,0,0,0,0,0],[0,0,0,0,0,0],[0,0,0,0,0,0],[0,0,0,0,0,0],[0,0,0,0,0,0],[0,0,0,0,0,0]];}
+function emptyMat(n){var m=[];for(var i=0;i<n;i++){var r=[];for(var j=0;j<n;j++)r.push(0);m.push(r);}return m;}
 var exCon=[[0,0,0,0,0,0],[0,0,0,-1,0,0],[0,-1,0,-1,-1,0],[0,0,0,0,-1,0],[0,-1,0,-1,0,0],[0,0,0,-1,0,0]];
-var S={pos:[2,3,4,6,6,7],con:exCon.map(function(r){return r.slice();}),sol:null,ss:null,mode:'dijk'};
+var S={pos:[2,3,4,6,6,7],con:exCon.map(function(r){return r.slice();}),sol:null,ss:null,mode:'dijk',n:6};
 
 /* ── BFS: minimiert Anzahl Züge ──────────────────────────────────── */
 function bfs(sp,cn){
-  var TK='4,4,4,4,4,4',sk=sp.join(',');
+  var n=sp.length,tk=[],i;for(i=0;i<n;i++)tk.push(4);
+  var TK=tk.join(','),sk=sp.join(',');
   if(sk===TK)return[];
   var par=new Map([[sk,null]]),q=[sp.slice()],h=0;
   while(h<q.length){
     var p=q[h++],pk=p.join(',');
-    for(var b=0;b<6;b++){for(var di=-1;di<=1;di+=2){
+    for(var b=0;b<n;b++){for(var di=-1;di<=1;di+=2){
       var np=p.slice();np[b]+=di;
       if(np[b]<1||np[b]>7)continue;
       var ok=true;
-      for(var c=0;c<6;c++){if(c!==b&&cn[b][c]!==0){np[c]+=di*cn[b][c];if(np[c]<1||np[c]>7){ok=false;break;}}}
+      for(var c=0;c<n;c++){if(c!==b&&cn[b][c]!==0){np[c]+=di*cn[b][c];if(np[c]<1||np[c]>7){ok=false;break;}}}
       if(!ok)continue;
       var key=np.join(',');
       if(!par.has(key)){
@@ -153,30 +163,32 @@ function bfs(sp,cn){
 /* Kostenfunktion: Wechsel von Riegel cur zu b kostet |b-cur| + 1   */
 /* State kodiert als 21-bit Integer: pos[0..5] je 3 Bit + bolt 3 Bit */
 function dijkstra(sp,cn,startBolt){
-  function enc(pos,b){return(pos[0]-1)|((pos[1]-1)<<3)|((pos[2]-1)<<6)|((pos[3]-1)<<9)|((pos[4]-1)<<12)|((pos[5]-1)<<15)|(b<<18);}
-  function dec(k){return[(k&7)+1,((k>>3)&7)+1,((k>>6)&7)+1,((k>>9)&7)+1,((k>>12)&7)+1,((k>>15)&7)+1,(k>>18)&7];}
+  var n=sp.length;
+  function enc(pos,b){var k=0;for(var i=n-1;i>=0;i--)k=k*7+(pos[i]-1);return k*n+b;}
+  function dec(k){var b=k%n,rest=Math.floor(k/n),pos=[];for(var i=0;i<n;i++){pos.push((rest%7)+1);rest=Math.floor(rest/7);}return{pos:pos,bolt:b};}
   var startKey=enc(sp,startBolt);
   var dist=new Map([[startKey,0]]);
   var parent=new Map([[startKey,null]]);
   var heap=[[0,startKey]];
   function hUp(i){while(i>0){var p=(i-1)>>1;if(heap[p][0]<=heap[i][0])break;var t=heap[p];heap[p]=heap[i];heap[i]=t;i=p;}}
-  function hDn(i){var n=heap.length;while(true){var l=2*i+1,r=2*i+2,m=i;if(l<n&&heap[l][0]<heap[m][0])m=l;if(r<n&&heap[r][0]<heap[m][0])m=r;if(m===i)break;var t=heap[m];heap[m]=heap[i];heap[i]=t;i=m;}}
+  function hDn(i){var hn=heap.length;while(true){var l=2*i+1,r=2*i+2,m=i;if(l<hn&&heap[l][0]<heap[m][0])m=l;if(r<hn&&heap[r][0]<heap[m][0])m=r;if(m===i)break;var t=heap[m];heap[m]=heap[i];heap[i]=t;i=m;}}
   while(heap.length>0){
     var top=heap[0];heap[0]=heap[heap.length-1];heap.pop();hDn(0);
     var cost=top[0],key=top[1];
     if(cost>dist.get(key))continue;
-    var d=dec(key);
-    var pos=[d[0],d[1],d[2],d[3],d[4],d[5]],cur=d[6];
-    if(pos[0]===4&&pos[1]===4&&pos[2]===4&&pos[3]===4&&pos[4]===4&&pos[5]===4){
+    var dd=dec(key);
+    var pos=dd.pos,cur=dd.bolt;
+    var atGoal=true;for(var g=0;g<n;g++)if(pos[g]!==4){atGoal=false;break;}
+    if(atGoal){
       var path=[],k=key;
       while(parent.get(k)!==null){var e=parent.get(k);path.unshift({b:e.b,d:e.d});k=e.pk;}
       return path;
     }
-    for(var b=0;b<6;b++){for(var di=-1;di<=1;di+=2){
+    for(var b=0;b<n;b++){for(var di=-1;di<=1;di+=2){
       var np=pos.slice();np[b]+=di;
       if(np[b]<1||np[b]>7)continue;
       var ok=true;
-      for(var c=0;c<6;c++){if(c!==b&&cn[b][c]!==0){np[c]+=di*cn[b][c];if(np[c]<1||np[c]>7){ok=false;break;}}}
+      for(var c=0;c<n;c++){if(c!==b&&cn[b][c]!==0){np[c]+=di*cn[b][c];if(np[c]<1||np[c]>7){ok=false;break;}}}
       if(!ok)continue;
       var nc=cost+Math.abs(b-cur)+1;
       var nk=enc(np,b);
@@ -207,10 +219,10 @@ function hCSS(h,p){
 /* ── Render positions ─────────────────────────────────────────────── */
 function renderPos(){
   var el=document.getElementById('pos-rows');el.innerHTML='';
-  for(var i=0;i<6;i++){(function(i){
+  for(var i=0;i<S.n;i++){(function(i){
     var p=S.pos[i];
     var row=document.createElement('div');row.className='bolt-row';
-    if(i===5)row.style.borderBottom='none';
+    if(i===S.n-1)row.style.borderBottom='none';
     var lbl=document.createElement('span');lbl.className='bolt-label';lbl.textContent='R'+(i+1);row.appendChild(lbl);
     var hols=document.createElement('div');hols.className='holes';
     for(var h=1;h<=7;h++){var d=document.createElement('div');d.style.cssText=hCSS(h,p);hols.appendChild(d);}
@@ -241,12 +253,12 @@ function renderConn(){
   var tbl=document.getElementById('conn-tbl');tbl.innerHTML='';
   var tr0=document.createElement('tr');
   var th0=document.createElement('th');th0.style.cssText='text-align:right;padding-right:8px;color:#4a3820';th0.textContent='↓/→';tr0.appendChild(th0);
-  for(var j=0;j<6;j++){var th=document.createElement('th');th.textContent='R'+(j+1);tr0.appendChild(th);}
+  for(var j=0;j<S.n;j++){var th=document.createElement('th');th.textContent='R'+(j+1);tr0.appendChild(th);}
   tbl.appendChild(tr0);
-  for(var i=0;i<6;i++){(function(i){
+  for(var i=0;i<S.n;i++){(function(i){
     var tr=document.createElement('tr');
     var td0=document.createElement('td');td0.style.cssText='font-size:11px;color:#6a5840;text-align:right;padding-right:8px';td0.textContent='R'+(i+1);tr.appendChild(td0);
-    for(var j=0;j<6;j++){(function(j){
+    for(var j=0;j<S.n;j++){(function(j){
       var td=document.createElement('td');td.style.padding='3px 4px';
       if(i===j){var d=document.createElement('div');d.className='conn-self';td.appendChild(d);}
       else{
@@ -277,6 +289,7 @@ function clOut(){document.getElementById('out').innerHTML='';}
 function refreshSol(){if(S.sol)showSol(S.sol,S.ss);}
 
 function showSol(moves,sp){
+  var solN=sp.length;
   var inv=document.getElementById('inv').checked;
   var startBolt=0;
   var out=document.getElementById('out');
@@ -296,7 +309,7 @@ function showSol(moves,sp){
   h+='<th style="min-width:26px">#</th>';
   h+='<th class="tl" style="min-width:70px">WASD</th>';
   h+='<th class="tl" style="min-width:145px">Riegel + Taste</th>';
-  for(var r=1;r<=6;r++)h+='<th>R'+r+'</th>';
+  for(var r=1;r<=solN;r++)h+='<th>R'+r+'</th>';
   h+='</tr></thead><tbody>';
   // Start row
   h+='<tr><td class="mu" style="font-size:10px">Start</td>';
@@ -319,7 +332,7 @@ function showSol(moves,sp){
     h+='<td class="mu" style="font-size:10px">'+(m+1)+'</td>';
     h+='<td class="tl">'+navStr+'</td>';
     h+='<td class="tl"><span class="fw">R'+(mv.b+1)+'</span><span class="'+lcls+'" style="font-size:11px"> '+lbl+'</span></td>';
-    for(var i=0;i<6;i++){
+    for(var i=0;i<solN;i++){
       var ch=np[i]!==pos[i],dn=np[i]===4;
       h+='<td class="'+(dn?'gx':ch?'wx':'mu')+'">'+np[i]+(dn?'✓':'')+'</td>';
     }
@@ -343,9 +356,23 @@ function doSolve(){
 }
 
 /* ── Actions ──────────────────────────────────────────────────────── */
-function loadEx(){S.pos=[2,3,4,6,6,7];S.con=exCon.map(function(r){return r.slice();});S.sol=null;clOut();renderPos();renderConn();}
-function clearConns(){S.con=emptyMat();S.sol=null;clOut();renderConn();}
+function loadEx(){S.n=6;document.getElementById('boltCount').value='6';S.pos=[2,3,4,6,6,7];S.con=exCon.map(function(r){return r.slice();});S.sol=null;clOut();renderPos();renderConn();}
+function clearConns(){S.con=emptyMat(S.n);S.sol=null;clOut();renderConn();}
 
+/* ── Set bolt count ───────────────────────────────────────────────── */
+function setBoltCount(){
+  var newN=parseInt(document.getElementById('boltCount').value);
+  var oldN=S.n;
+  while(S.pos.length<newN)S.pos.push(4);
+  S.pos=S.pos.slice(0,newN);
+  var nc=[];
+  for(var i=0;i<newN;i++){
+    var row=[];
+    for(var j=0;j<newN;j++)row.push(i<oldN&&j<oldN?S.con[i][j]:0);
+    nc.push(row);
+  }
+  S.con=nc;S.n=newN;S.sol=null;clOut();renderPos();renderConn();
+}
 /* ── Init ─────────────────────────────────────────────────────────── */
 renderPos();
 renderConn();
