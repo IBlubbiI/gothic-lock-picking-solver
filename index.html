@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lock Picking Solver · Gothic Remake</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{background:#0e0800;color:#d4c4a8;font-family:'Inter',system-ui,sans-serif;min-height:100vh;padding:24px 16px 48px;line-height:1.5}
+.app{max-width:920px;margin:0 auto}
+.lang-bar{text-align:right;margin-bottom:12px}
+.lang-bar a{font-size:11px;text-decoration:none;padding:3px 8px;border-radius:3px;margin-left:4px;letter-spacing:.05em}
+.lang-active{color:#f0c040;border:1px solid #6b4520;background:#1a0e04}
+.lang-other{color:#6a5840;border:1px solid #3d2810}
+.lang-other:hover{color:#d4c4a8;border-color:#6b4520}
+.header{text-align:center;margin-bottom:28px}
+.header-sub{font-size:10px;letter-spacing:.45em;color:#7a5a08;text-transform:uppercase;margin-bottom:8px}
+h1{font-family:'Cinzel',serif;font-size:26px;letter-spacing:.25em;text-transform:uppercase;color:#f0c040;font-weight:600;text-shadow:0 0 40px rgba(200,150,12,.3);margin-bottom:14px}
+.divider{height:1px;background:linear-gradient(to right,transparent,#6b4520 25%,#6b4520 75%,transparent)}
+.panel{background:rgba(255,255,255,.025);border:1px solid #3d2810;border-radius:8px;padding:18px 20px}
+.panel-title{font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:#c8960c;margin-bottom:14px;font-weight:500}
+.grid-2{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:14px;margin-bottom:14px}
+.bolt-row{display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid rgba(61,40,16,.35)}
+.bolt-row:last-child{border-bottom:none}
+.bolt-label{min-width:26px;height:22px;display:flex;align-items:center;justify-content:center;background:#100800;border:1px solid #3d2810;border-radius:4px;font-size:11px;color:#7a5a08;flex-shrink:0}
+.holes{display:flex;gap:4px;align-items:center}
+.pos-num{min-width:18px;text-align:center;font-size:13px;font-weight:500}
+.btn-grp{display:flex;gap:4px;margin-left:auto;flex-shrink:0}
+button{cursor:pointer;font-family:'Inter',system-ui,sans-serif;transition:all .15s}
+.btn-icon{background:#100800;border:1px solid #3d2810;color:#6a5840;font-size:10px;padding:3px 7px;border-radius:3px}
+.btn-icon:hover:not(:disabled){border-color:#6b4520;color:#d4c4a8}
+.btn-icon:disabled{opacity:.3;cursor:default}
+.btn-primary{background:linear-gradient(to bottom,#2e2206,#1a1004);border:1px solid #c8960c;color:#f0c040;font-size:13px;padding:9px 24px;border-radius:5px;letter-spacing:.15em;text-transform:uppercase;font-weight:600;font-family:'Cinzel',serif;box-shadow:0 0 14px rgba(200,150,12,.2)}
+.btn-primary:hover{background:linear-gradient(to bottom,#3e2e08,#221408);box-shadow:0 0 22px rgba(200,150,12,.38)}
+.btn-outline{background:transparent;border:1px solid #3d2810;color:#7a5a08;font-size:10px;padding:5px 12px;border-radius:4px;letter-spacing:.1em;text-transform:uppercase}
+.btn-outline:hover{border-color:#6b4520;color:#d4c4a8}
+.conn-table{border-collapse:collapse}
+.conn-table th{font-size:11px;color:#6a5840;font-weight:400;padding:2px 5px 6px;text-align:center}
+.conn-table td{padding:3px 4px;text-align:center}
+.conn-cell{width:28px;height:24px;display:flex;align-items:center;justify-content:center;cursor:pointer;border-radius:4px;border:1px solid #3d2810;font-size:14px;font-weight:600;user-select:none;transition:border-color .12s}
+.conn-cell:hover{border-color:#6b4520}
+.conn-self{width:28px;height:24px;background:#0a0500;border-radius:3px;margin:0 auto}
+.legend{font-size:11px;color:#6a5840;margin-bottom:10px;line-height:1.7}
+.controls{border:1px solid #3d2810;border-radius:8px;padding:12px 16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px;background:rgba(255,255,255,.015)}
+.ctrl-sep{width:1px;height:20px;background:#3d2810;flex-shrink:0}
+.controls label{display:flex;align-items:center;gap:7px;font-size:12px;color:#6a5840;cursor:pointer;white-space:nowrap}
+.controls label input[type=checkbox]{cursor:pointer;accent-color:#c8960c;width:14px;height:14px}
+select{background:#100800;border:1px solid #3d2810;color:#d4c4a8;font-size:11px;padding:4px 8px;border-radius:4px;cursor:pointer;font-family:'Inter',system-ui;outline:none}
+select:focus{border-color:#6b4520}
+.mode-toggle{display:flex;gap:2px;background:#100800;border:1px solid #3d2810;border-radius:5px;padding:2px;flex-shrink:0}
+.mode-btn{background:transparent;border:1px solid transparent;color:#6a5840;font-size:10px;padding:4px 10px;border-radius:4px;letter-spacing:.07em;text-transform:uppercase;font-weight:500}
+.mode-btn.active{background:#2e2206;color:#f0c040;border-color:#6b4520}
+.ctrl-right{margin-left:auto;display:flex;gap:8px;flex-shrink:0;align-items:center}
+.sol-panel{animation:fadeIn .2s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+.sol-table{width:100%;border-collapse:collapse;font-size:12px}
+.sol-table th{font-size:10px;color:#6a5840;font-weight:400;letter-spacing:.07em;text-transform:uppercase;padding:5px 8px;border-bottom:1px solid rgba(61,40,16,.5);text-align:center}
+.sol-table td{padding:5px 8px;border-bottom:1px solid rgba(61,40,16,.22);text-align:center}
+.sol-table tr:hover td{background:rgba(255,255,255,.02)}
+.sol-table tr:last-child td{border-bottom:none}
+.mu{color:#6a5840}.wx{color:#e8b830;font-weight:500}.gx{color:#4CAF50;font-weight:500}.bx{color:#4a80d0}.fw{font-weight:500}.tl{text-align:left}
+.alert{border-radius:6px;padding:11px 16px;font-size:13px}
+.alert-err{background:rgba(120,40,40,.2);border:1px solid #6a2020;color:#ff9090}
+.alert-ok{background:rgba(40,90,40,.18);border:1px solid #2a6a2a;color:#7aff7a}
+.alert-load{background:rgba(200,150,12,.1);border:1px solid #6b4520;color:#c8960c}
+.table-wrap{overflow-x:auto}
+.sol-meta{font-size:11px;color:#6a5840;margin-bottom:14px;line-height:1.6}
+.highlight{color:#f0c040}
+</style>
+</head>
+<body>
+<div class="app">
+<div class="lang-bar">
+  <a href="index.html" class="lang-active">EN</a>
+  <a href="index-de.html" class="lang-other">DE</a>
+</div>
+<div class="header">
+  <div class="header-sub">Gothic Remake</div>
+  <h1>&#9876; Lock Picking Solver &#9876;</h1>
+  <div class="divider"></div>
+</div>
+<div class="grid-2">
+  <div class="panel">
+    <div class="panel-title">Starting Positions</div>
+    <div style="font-size:10px;color:#6a5840;margin-bottom:10px">&#9679; current &nbsp;&middot;&nbsp; &#9675; goal (hole 4)</div>
+    <div id="pos-rows"></div>
+  </div>
+  <div class="panel">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <div class="panel-title" style="margin:0">Connections</div>
+      <button class="btn-outline" onclick="clearConns()">Clear all</button>
+    </div>
+    <div class="legend">
+      Row moves &rarr; column moves:<br>
+      <span style="color:#6a5840">&ndash; none &nbsp;</span>
+      <span style="color:#c8960c">&ne; opposite &nbsp;</span>
+      <span style="color:#4a80d0">= same direction</span><br>
+      <span style="font-size:10px">Click a cell to cycle through states</span>
+    </div>
+    <div class="table-wrap"><table class="conn-table" id="conn-tbl"></table></div>
+  </div>
+</div>
+<div class="controls">
+  <label>
+    <input type="checkbox" id="inv" checked onchange="refreshSol()">
+    Right key = bolt moves left (Gothic Remake)
+  </label>
+  <div class="ctrl-sep"></div>
+  <div class="mode-toggle">
+    <button class="mode-btn active" id="mode-dijk" onclick="setMode('dijk')">Min. keystrokes</button>
+    <button class="mode-btn" id="mode-bfs" onclick="setMode('bfs')">Min. moves</button>
+  </div>
+  <div class="ctrl-right">
+    <button class="btn-outline" onclick="loadEx()">Load example</button>
+    <button class="btn-primary" onclick="doSolve()">&#9876; Find solution</button>
+  </div>
+</div>
+<div id="out"></div>
+</div>
+<script>
+function emptyMat(){return[[0,0,0,0,0,0],[0,0,0,0,0,0],[0,0,0,0,0,0],[0,0,0,0,0,0],[0,0,0,0,0,0],[0,0,0,0,0,0]];}
+var exCon=[[0,0,0,0,0,0],[0,0,0,-1,0,0],[0,-1,0,-1,-1,0],[0,0,0,0,-1,0],[0,-1,0,-1,0,0],[0,0,0,-1,0,0]];
+var S={pos:[2,3,4,6,6,7],con:exCon.map(function(r){return r.slice();}),sol:null,ss:null,mode:'dijk'};
+function bfs(sp,cn){
+  var TK='4,4,4,4,4,4',sk=sp.join(',');
+  if(sk===TK)return[];
+  var par=new Map([[sk,null]]),q=[sp.slice()],h=0;
+  while(h<q.length){
+    var p=q[h++],pk=p.join(',');
+    for(var b=0;b<6;b++){for(var di=-1;di<=1;di+=2){
+      var np=p.slice();np[b]+=di;
+      if(np[b]<1||np[b]>7)continue;
+      var ok=true;
+      for(var c=0;c<6;c++){if(c!==b&&cn[b][c]!==0){np[c]+=di*cn[b][c];if(np[c]<1||np[c]>7){ok=false;break;}}}
+      if(!ok)continue;
+      var key=np.join(',');
+      if(!par.has(key)){
+        par.set(key,{pk:pk,b:b,d:di});
+        if(key===TK){var path=[],kk=key;while(par.get(kk)){var e=par.get(kk);path.unshift({b:e.b,d:e.d});kk=e.pk;}return path;}
+        q.push(np);
+      }
+    }}
+  }
+  return null;
+}
+function dijkstra(sp,cn,startBolt){
+  function enc(pos,b){return(pos[0]-1)|((pos[1]-1)<<3)|((pos[2]-1)<<6)|((pos[3]-1)<<9)|((pos[4]-1)<<12)|((pos[5]-1)<<15)|(b<<18);}
+  function dec(k){return[(k&7)+1,((k>>3)&7)+1,((k>>6)&7)+1,((k>>9)&7)+1,((k>>12)&7)+1,((k>>15)&7)+1,(k>>18)&7];}
+  var startKey=enc(sp,startBolt);
+  var dist=new Map([[startKey,0]]);
+  var parent=new Map([[startKey,null]]);
+  var heap=[[0,startKey]];
+  function hUp(i){while(i>0){var p=(i-1)>>1;if(heap[p][0]<=heap[i][0])break;var t=heap[p];heap[p]=heap[i];heap[i]=t;i=p;}}
+  function hDn(i){var n=heap.length;while(true){var l=2*i+1,r=2*i+2,m=i;if(l<n&&heap[l][0]<heap[m][0])m=l;if(r<n&&heap[r][0]<heap[m][0])m=r;if(m===i)break;var t=heap[m];heap[m]=heap[i];heap[i]=t;i=m;}}
+  while(heap.length>0){
+    var top=heap[0];heap[0]=heap[heap.length-1];heap.pop();hDn(0);
+    var cost=top[0],key=top[1];
+    if(cost>dist.get(key))continue;
+    var d=dec(key);
+    var pos=[d[0],d[1],d[2],d[3],d[4],d[5]],cur=d[6];
+    if(pos[0]===4&&pos[1]===4&&pos[2]===4&&pos[3]===4&&pos[4]===4&&pos[5]===4){
+      var path=[],k=key;
+      while(parent.get(k)!==null){var e=parent.get(k);path.unshift({b:e.b,d:e.d});k=e.pk;}
+      return path;
+    }
+    for(var b=0;b<6;b++){for(var di=-1;di<=1;di+=2){
+      var np=pos.slice();np[b]+=di;
+      if(np[b]<1||np[b]>7)continue;
+      var ok=true;
+      for(var c=0;c<6;c++){if(c!==b&&cn[b][c]!==0){np[c]+=di*cn[b][c];if(np[c]<1||np[c]>7){ok=false;break;}}}
+      if(!ok)continue;
+      var nc=cost+Math.abs(b-cur)+1;
+      var nk=enc(np,b);
+      if(!dist.has(nk)||nc<dist.get(nk)){
+        dist.set(nk,nc);parent.set(nk,{pk:key,b:b,d:di});
+        heap.push([nc,nk]);hUp(heap.length-1);
+      }
+    }}
+  }
+  return null;
+}
+function applyMv(pos,b,d,cn){var np=pos.slice();np[b]+=d;for(var c=0;c<6;c++)if(c!==b&&cn[b][c]!==0)np[c]+=d*cn[b][c];return np;}
+function hCSS(h,p){
+  var base='width:13px;height:13px;border-radius:50%;flex-shrink:0;transition:background .12s;';
+  if(h===p&&h===4)return base+'background:#4CAF50;border:1.5px solid #4CAF50;';
+  if(h===p)return base+'background:#e8b830;border:1.5px solid #e8b830;box-shadow:0 0 6px rgba(232,184,48,.5);';
+  if(h===4)return base+'background:#0e0800;border:1.5px solid #2a5a28;';
+  return base+'background:#0e0800;border:1.5px solid #2a1808;';
+}
+function renderPos(){
+  var el=document.getElementById('pos-rows');el.innerHTML='';
+  for(var i=0;i<6;i++){(function(i){
+    var p=S.pos[i];
+    var row=document.createElement('div');row.className='bolt-row';
+    if(i===5)row.style.borderBottom='none';
+    var lbl=document.createElement('span');lbl.className='bolt-label';lbl.textContent='R'+(i+1);row.appendChild(lbl);
+    var hols=document.createElement('div');hols.className='holes';
+    for(var h=1;h<=7;h++){var d=document.createElement('div');d.style.cssText=hCSS(h,p);hols.appendChild(d);}
+    row.appendChild(hols);
+    var vn=document.createElement('span');vn.className='pos-num';
+    vn.style.color=p===4?'#4CAF50':'#f0c040';vn.textContent=p;row.appendChild(vn);
+    var bg=document.createElement('div');bg.className='btn-grp';
+    var bL=document.createElement('button');bL.className='btn-icon';bL.textContent='\u25C4';bL.disabled=p<=1;
+    bL.onclick=function(){S.pos[i]=Math.max(1,S.pos[i]-1);S.sol=null;renderPos();clOut();};
+    var bR=document.createElement('button');bR.className='btn-icon';bR.textContent='\u25BA';bR.disabled=p>=7;
+    bR.onclick=function(){S.pos[i]=Math.min(7,S.pos[i]+1);S.sol=null;renderPos();clOut();};
+    bg.appendChild(bL);bg.appendChild(bR);row.appendChild(bg);el.appendChild(row);
+  })(i);}
+}
+function cellInfo(v){
+  if(v===0)return{sym:'\u2013',col:'#4a3820',tip:'none \u2192 click: opposite'};
+  if(v===-1)return{sym:'\u2260',col:'#c8960c',tip:'opposite \u2192 click: same'};
+  return{sym:'=',col:'#4a80d0',tip:'same \u2192 click: none'};
+}
+function updateCell(i,j){
+  var el=document.getElementById('cc-'+i+'-'+j);if(!el)return;
+  var info=cellInfo(S.con[i][j]);el.textContent=info.sym;el.style.color=info.col;
+  el.title='R'+(i+1)+' \u2192 R'+(j+1)+': '+info.tip;
+}
+function renderConn(){
+  var tbl=document.getElementById('conn-tbl');tbl.innerHTML='';
+  var tr0=document.createElement('tr');
+  var th0=document.createElement('th');th0.style.cssText='text-align:right;padding-right:8px;color:#4a3820';th0.textContent='\u2193/\u2192';tr0.appendChild(th0);
+  for(var j=0;j<6;j++){var th=document.createElement('th');th.textContent='R'+(j+1);tr0.appendChild(th);}
+  tbl.appendChild(tr0);
+  for(var i=0;i<6;i++){(function(i){
+    var tr=document.createElement('tr');
+    var td0=document.createElement('td');td0.style.cssText='font-size:11px;color:#6a5840;text-align:right;padding-right:8px';td0.textContent='R'+(i+1);tr.appendChild(td0);
+    for(var j=0;j<6;j++){(function(j){
+      var td=document.createElement('td');td.style.padding='3px 4px';
+      if(i===j){var d=document.createElement('div');d.className='conn-self';td.appendChild(d);}
+      else{
+        var info=cellInfo(S.con[i][j]);
+        var cell=document.createElement('div');cell.className='conn-cell';cell.id='cc-'+i+'-'+j;
+        cell.textContent=info.sym;cell.style.color=info.col;
+        cell.title='R'+(i+1)+' \u2192 R'+(j+1)+': '+info.tip;
+        cell.onclick=(function(ii,jj){return function(){
+          var cur=S.con[ii][jj];S.con[ii][jj]=cur===0?-1:cur===-1?1:0;S.sol=null;clOut();updateCell(ii,jj);
+        };})(i,j);
+        td.appendChild(cell);
+      }
+      tr.appendChild(td);
+    })(j);}
+    tbl.appendChild(tr);
+  })(i);}
+}
+function setMode(m){
+  S.mode=m;S.sol=null;clOut();
+  document.getElementById('mode-bfs').className='mode-btn'+(m==='bfs'?' active':'');
+  document.getElementById('mode-dijk').className='mode-btn'+(m==='dijk'?' active':'');
+}
+function clOut(){document.getElementById('out').innerHTML='';}
+function refreshSol(){if(S.sol)showSol(S.sol,S.ss);}
+function showSol(moves,sp){
+  var inv=document.getElementById('inv').checked;
+  var startBolt=0;
+  var out=document.getElementById('out');
+  if(moves.length===0){out.innerHTML='<div class="alert alert-ok">\u2713 Already solved \u2013 all bolts at position 4.</div>';return;}
+  var prevBolt=startBolt,totalNav=0;
+  for(var m=0;m<moves.length;m++){totalNav+=Math.abs(moves[m].b-prevBolt);prevBolt=moves[m].b;}
+  var totalKeys=moves.length+totalNav;
+  var modeStr=S.mode==='dijk'
+    ?'<span class="highlight">'+totalKeys+' keystrokes</span> total ('+moves.length+' moves + '+totalNav+' WASD navigation) \u00b7 Starting bolt R'+(startBolt+1)
+    :'<span class="highlight">'+moves.length+' moves</span> (minimum) \u00b7 '+totalKeys+' keystrokes at starting bolt R'+(startBolt+1);
+  var h='<div class="panel sol-panel"><div class="panel-title">Solution \u2013 '+(S.mode==='dijk'?'minimum keystrokes':'minimum moves')+'</div>';
+  h+='<div class="sol-meta">'+modeStr+'</div>';
+  h+='<div class="table-wrap"><table class="sol-table"><thead><tr>';
+  h+='<th style="min-width:26px">#</th>';
+  h+='<th class="tl" style="min-width:70px">WASD</th>';
+  h+='<th class="tl" style="min-width:145px">Bolt + Key</th>';
+  for(var r=1;r<=6;r++)h+='<th>R'+r+'</th>';
+  h+='</tr></thead><tbody>';
+  h+='<tr><td class="mu" style="font-size:10px">Start</td>';
+  h+='<td class="mu tl" style="font-size:11px">Bolt R'+(startBolt+1)+' selected</td>';
+  h+='<td class="mu tl">\u2014</td>';
+  for(var i=0;i<6;i++)h+='<td class="'+(sp[i]===4?'gx':'mu')+'">'+(sp[i])+(sp[i]===4?'\u2713':'')+'</td>';
+  h+='</tr>';
+  var pos=sp.slice();prevBolt=startBolt;
+  for(var m=0;m<moves.length;m++){
+    var mv=moves[m],np=applyMv(pos,mv.b,mv.d,S.con);
+    var navD=mv.b-prevBolt,navStr;
+    if(navD===0)navStr='<span class="mu" style="font-size:11px">\u2014</span>';
+    else if(navD>0)navStr='<span style="color:#9a8060;font-size:11px">W \u00d7'+navD+'</span>';
+    else navStr='<span style="color:#9a8060;font-size:11px">S \u00d7'+(-navD)+'</span>';
+    var lbl,lcls;
+    if(inv){lbl=mv.d>0?'\u2190 Left':'\u2192 Right';lcls=mv.d>0?'bx':'wx';}
+    else{lbl=mv.d>0?'\u2192 Right':'\u2190 Left';lcls=mv.d>0?'wx':'bx';}
+    h+='<tr>';
+    h+='<td class="mu" style="font-size:10px">'+(m+1)+'</td>';
+    h+='<td class="tl">'+navStr+'</td>';
+    h+='<td class="tl"><span class="fw">R'+(mv.b+1)+'</span><span class="'+lcls+'" style="font-size:11px"> '+lbl+'</span></td>';
+    for(var i=0;i<6;i++){
+      var ch=np[i]!==pos[i],dn=np[i]===4;
+      h+='<td class="'+(dn?'gx':ch?'wx':'mu')+'">'+np[i]+(dn?'\u2713':'')+'</td>';
+    }
+    h+='</tr>';pos=np;prevBolt=mv.b;
+  }
+  h+='</tbody></table></div></div>';
+  out.innerHTML=h;
+}
+function doSolve(){
+  clOut();
+  document.getElementById('out').innerHTML='<div class="alert alert-load">\u29d6 Calculating\u2026</div>';
+  var pos=S.pos.slice(),con=S.con.map(function(r){return r.slice();}),mode=S.mode;
+  var startBolt=0;
+  setTimeout(function(){
+    var raw=mode==='bfs'?bfs(pos,con):dijkstra(pos,con,startBolt);
+    if(raw===null){document.getElementById('out').innerHTML='<div class="alert alert-err">\u2717 No solution found. Check starting positions and connections.</div>';return;}
+    S.sol=raw;S.ss=pos;showSol(raw,pos);
+  },20);
+}
+function loadEx(){S.pos=[2,3,4,6,6,7];S.con=exCon.map(function(r){return r.slice();});S.sol=null;clOut();renderPos();renderConn();}
+function clearConns(){S.con=emptyMat();S.sol=null;clOut();renderConn();}
+renderPos();
+renderConn();
+</script>
+</body>
+</html>
